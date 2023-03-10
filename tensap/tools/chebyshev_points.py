@@ -20,9 +20,10 @@ Module chebyshev_points.
 """
 
 import numpy as np
+from typing import List, Union, Optional
 
 
-def chebyshev_points(n, s=None):
+def chebyshev_points(n: int, s: Optional[Union[List[float], np.ndarray]] = None) -> np.ndarray:
     """
     Return the first n Chebyshev points in [s[0], s[1]].
 
