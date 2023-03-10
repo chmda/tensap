@@ -318,7 +318,7 @@ class SparseTensorGrid(TensorGrid):
 
     @property
     def size(self) -> int:
-        return self.indices.cardinal()
+        return self.indices.cardinal
 
     def array(self) -> np.ndarray:
         ind = self.indices.to_list()
