@@ -21,9 +21,12 @@ Module magic_indices.
 """
 
 import numpy as np
+from typing import List, Union, Optional, Tuple, cast
 
 
-def magic_indices(F, n=None, option="left_right"):
+def magic_indices(
+    F: Union[List, np.ndarray], n: Optional[int] = None, option: str = "left_right"
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return the set of n magic indices (i_1, j_1), ..., (i_n, j_n) constructed
     by a greedy algorithm.
@@ -63,7 +66,7 @@ def magic_indices(F, n=None, option="left_right"):
         The magic indices.
 
     """
-    F = np.atleast_2d(F)
+    F = cast(np.ndarray, np.atleast_2d(F))
     if n is None:
         n = np.min(F.shape)
 
@@ -90,4 +93,4 @@ def magic_indices(F, n=None, option="left_right"):
         J, I0 = magic_indices(np.transpose(F), n, "left")
     else:
         raise ValueError("Bad option.")
-    return I0, J
+    return np.array(I0), np.array(J)
