@@ -20,20 +20,21 @@ Module utils.
 """
 
 import numpy as np
+from typing import Union, List, Optional
 
 
-def fast_intersect(a, b):
-    aux = np.concatenate((a, b))
+def fast_intersect(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    aux: np.ndarray = np.concatenate((a, b))  # type: ignore
     aux.sort()
     mask = aux[1:] == aux[:-1]
     return aux[:-1][mask]
 
 
-def fast_setdiff(a, b):
+def fast_setdiff(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return a[np.logical_not(np.isin(a, b, assume_unique=True))]
 
 
-def integer2baseb(i, b, d=None):
+def integer2baseb(i: Union[List[int], np.ndarray], b: int, d: Optional[int] = None):
     """
     Returns the representation [i_1, ..., i_d] in base b of a set of non
     negative integers i = sum_{k=1}^d i_k b^(d-k) in [0, b^d-1].
@@ -61,13 +62,13 @@ def integer2baseb(i, b, d=None):
     return np.fliplr(np.transpose(np.array(I0)))
 
 
-def baseb2integer(I0, b):
+def baseb2integer(I0: Union[List[int], np.ndarray], b: int) -> np.ndarray:
     """
     Return the integers with given representations in base b.
 
     Parameters
     ----------
-    I : numpy.ndarray or list
+    I0 : numpy.ndarray or list
         A row of I contains d integers [i_1, ..., i_d] in {0, ..., b-1}
         associated with an integer i = sum_{k=1}^d i_k b^(d-k) in [0, b^d-1].
     b : int
@@ -79,8 +80,8 @@ def baseb2integer(I0, b):
         The integers with given representations in base b.
 
     """
-    I0 = np.atleast_2d(I0)
-    d = I0.shape[1]
-    I0 = np.fliplr(I0)
-    I0 = np.transpose(I0)
-    return np.ravel_multi_index(I0, np.full(d, b), order="F")
+    values: np.ndarray = np.atleast_2d(I0)  # type: ignore
+    d = values.shape[1]
+    values = np.fliplr(values)
+    values = np.transpose(values)
+    return np.ravel_multi_index(values, np.full(d, b), order="F")
