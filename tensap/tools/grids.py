@@ -20,6 +20,7 @@ Module grids.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any, List, Optional, Union, cast
 import numpy as np
 import tensap
 
@@ -39,7 +40,7 @@ class TensorGrid(ABC):
 
     """
 
-    def __init__(self):
+    def __init__(self, dim: int, grids: List[np.ndarray], shape: np.ndarray):
         """
         Constructor for the class TensorGrid.
 
@@ -48,11 +49,12 @@ class TensorGrid(ABC):
         None.
 
         """
-        self.dim = None
-        self.grids = None
-        self.shape = None
+        self.dim: int = dim
+        self.grids: List[np.ndarray] = grids
+        self.shape: np.ndarray = shape
 
-    def ndim(self):
+    @property
+    def ndim(self) -> int:
         """
         Return the dimension of the underlying space.
 
@@ -64,7 +66,7 @@ class TensorGrid(ABC):
         """
         return self.dim
 
-    def shape(self, d=None):
+    def get_shape(self, d: Optional[int] = None) -> np.ndarray:
         """
         Return the shape of the grid, along the dimension d if provided.
 
@@ -85,7 +87,7 @@ class TensorGrid(ABC):
             return self.shape
         return self.shape[d]
 
-    def plot_grid(self, *args, **kwargs):
+    def plot_grid(self, *args: Any, **kwargs: Any) -> None:
         """
         Plot the grid.
 
@@ -121,7 +123,7 @@ class TensorGrid(ABC):
             raise ValueError("The dimension must be less or equal than 3.")
 
     @abstractmethod
-    def array(self):
+    def array(self) -> np.ndarray:
         """
         Return an array of shape (n, d) where n is the number of grid points
         and d is the dimension.
@@ -135,7 +137,7 @@ class TensorGrid(ABC):
 
     @property
     @abstractmethod
-    def size(self):
+    def size(self) -> int:
         """
         Return the number of grid points.
 
@@ -153,7 +155,7 @@ class FullTensorGrid(TensorGrid):
 
     """
 
-    def __init__(self, grids, dim=None):
+    def __init__(self, grids: Union[List[np.ndarray], np.ndarray], dim: Optional[int] = None):
         """
         Constructor for the class FullTensorGrid.
 
@@ -173,37 +175,37 @@ class FullTensorGrid(TensorGrid):
 
         """
 
-        tensap.TensorGrid.__init__(self)
-
         if dim is None:
             dim = len(grids)
         else:
-            assert (
-                np.ndim(grids) == 1
-            ), "The first argument must be a unidimensional grid."
+            if np.ndim(grids) != 1:
+                raise ValueError("The first argument must be a unidimensional grid.")
             grids = [np.reshape(grids, (-1, 1))] * dim
-        grids = [np.atleast_2d(x) for x in grids]
 
-        self.dim = dim
-        self.shape = np.array([x.shape[0] for x in grids])
-        self.grids = grids
+        grids = [np.atleast_2d(x) for x in grids]  # type: ignore
 
-    def array(self, ind=None):
+        super().__init__(dim, grids, np.array([x.shape[0] for x in grids]))  # type: ignore
+
+    def array(self) -> np.ndarray:
+        return self.get_array(None)
+
+    def get_array(self, ind: Optional[np.ndarray] = None) -> np.ndarray:
         if ind is None:
             ind = self.multi_indices().array
+
         x = []
         for i in range(self.dim):
             x.append(self.grids[i][ind[:, i], :])
-        return np.column_stack(x)
+        return np.column_stack(x)  # type: ignore
 
-    def eval_at_indices(self, ind):
-        return self.array(ind)
+    def eval_at_indices(self, ind: np.ndarray) -> np.ndarray:
+        return self.get_array(ind)
 
     @property
-    def size(self):
+    def size(self) -> int:
         return np.prod(self.shape)
 
-    def multi_indices(self):
+    def multi_indices(self) -> tensap.MultiIndices:
         """
         Return a set of multi-indices for indexing the grid.
 
@@ -215,7 +217,7 @@ class FullTensorGrid(TensorGrid):
         """
         return tensap.MultiIndices.bounded_by(self.shape - 1)
 
-    def plot(self, y, *args):
+    def plot(self, y: Union[List[float], np.ndarray], *args: Any) -> None:
         """
         Plot the grid.
 
@@ -234,7 +236,7 @@ class FullTensorGrid(TensorGrid):
         """
         import matplotlib.pyplot as plt
 
-        d = self.ndim()
+        d = self.ndim
         plt.figure()
         if d == 1:
             plt.plot(self.grids[0], y, *args)
@@ -246,7 +248,7 @@ class FullTensorGrid(TensorGrid):
             raise ValueError("The dimension must be less or equal than 2.")
 
     @staticmethod
-    def random(X, n):
+    def random(X: tensap.RandomVector, n: Union[List[int], np.ndarray]):
         """
         Generate a random FullTensorGrid from a RandomVector.
 
@@ -266,7 +268,7 @@ class FullTensorGrid(TensorGrid):
         """
         d = X.size
 
-        n = np.atleast_1d(n)
+        n = cast(np.ndarray, np.atleast_1d(n))  # type: ignore
         if n.size == 1:
             n = np.tile(n, d)
 
@@ -282,7 +284,12 @@ class SparseTensorGrid(TensorGrid):
 
     """
 
-    def __init__(self, grids, indices, dim=None):
+    def __init__(
+        self,
+        grids: Union[List[np.ndarray], np.ndarray],
+        indices: tensap.MultiIndices,
+        dim: Optional[int] = None,
+    ):
         """
         Constructor for the class SparseTensorGrid
 
@@ -304,22 +311,19 @@ class SparseTensorGrid(TensorGrid):
         None.
 
         """
-        tensap.TensorGrid.__init__(self)
-
         T = tensap.FullTensorGrid(grids, dim)
-        self.dim = T.dim
-        self.grids = T.grids
-        self.shape = T.shape
+
+        super().__init__(T.dim, T.grids, T.shape)
         self.indices = indices
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.indices.cardinal()
 
-    def array(self):
+    def array(self) -> np.ndarray:
         ind = self.indices.to_list()
 
         x = list(self.grids)
         for k in range(len(x)):
             x[k] = x[k][ind[k], :]
-        return np.hstack(x)
+        return np.hstack(x)  # type: ignore
